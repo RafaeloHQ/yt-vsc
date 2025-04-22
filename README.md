@@ -2,7 +2,7 @@
 A simple 3-parameter yt-dlp automation script.
 
 >[!NOTE]
-> This script is personalized and requires editing the ```/home/rafael/``` directories.
+> This script is personalized and requires editing the ```/home/rafael/``` directories and the ```user_agent``` 
 
 
 ## Details
