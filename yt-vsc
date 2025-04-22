@@ -1,0 +1,132 @@
+#!/bin/bash
+
+yt-vsc() {
+
+link=""
+option=""
+
+
+case $1 in
+	http://*|https://*)
+		link=$1
+		;;
+	*)
+		if [[ -z $1 ]]; then
+            :
+		else
+            option=$1
+		fi
+		;;
+esac
+
+case $2 in
+	http://*|https://*)
+		link=$2
+		;;
+	*)
+		if [[ -z $2 ]]; then
+            :
+		else
+            option=$2
+		fi
+		;;
+esac
+
+case $option in
+	--audio-only)
+		if [[ $# -ne 2 ]]; then
+			echo "Invalid  use of --audio-only. Please only input the youtube link and the --audio-only parameter"
+		fi
+        user_agent="Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0"
+		yt-dlp --user-agent "$user_agent" -f "bestaudio[ext=m4a]/bestaudio" -o ~/Music/"%(title)s.%(ext)s" --embed-thumbnail --add-metadata "$link"
+		;;
+	--video-only)
+		if [[ $# -ne 2 ]]; then
+			echo "Invalid use of --video-only. Please only input the youtube link and the --video-only parameter"
+		fi 
+
+        user_agent="Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0"
+		yt-dlp -f "bestvideo[height<=1080]" --user-agent "$user_agent" -o ~/Videos/"%(title)s.%(ext)s" --write-subs --sub-lang "en.*" --write-auto-subs --convert-subs srt --remux-video mkv --embed-thumbnail --add-metadata --restrict-filenames "$link"
+        title_sanitized=$(yt-dlp -o "%(title)s" --restrict-filenames --get-filename "$link")
+        title=$(yt-dlp -o "%(title)s" --get-title "$link")
+        temp=$(mktemp)
+        count=2
+        ls -1vr ~/Videos/ | grep "$title_sanitized" | grep "\.srt$" > "$temp"
+        
+        ffmpeg_args=(-i ~/Videos/"$title_sanitized.mkv")
+        map_args="-map 0"
+        metadata_args=""
+        index=1
+
+        while IFS= read -r subtitle; do
+            ffmpeg_args+=(-i /home/rafael/Videos/"$subtitle")
+            language=$(echo "$subtitle" | sed -E 's/.*\.([a-zA-Z0-9_-]+)\.srt$/\1/')
+            map_args+=" -map $index"
+            metadata_args+=" -metadata:s:$(( index - 1 )) language=$language"
+            index=$(( index + 1 ))
+        done < "$temp"
+
+        output="/home/rafael/Videos/$title_sanitized.subtitled.mkv"
+        if [[ -f "/home/rafael/Videos/$title_sanitized.mkv" ]]; then
+            ffmpeg "${ffmpeg_args[@]}" $map_args $metadata_args -c copy -c:s srt "$output"
+            rm ~/Videos/"$title_sanitized.mkv"
+            rm ~/Videos/*.srt
+            mv ~/Videos/"$title_sanitized.subtitled.mkv" ~/Videos/"$title.mkv"
+        else
+            echo "File does not exist: ~/Videos/$title.mkv"
+        fi
+        ;;
+	--video-and-audio)
+		if [[ $# -ne 2 ]]; then
+			echo "Invalid use of --video-and-audio. Please only input the youtube link and the --video-and-audio parameter"
+		fi
+
+        user_agent="Mozilla/5.0 (X11; Linux x86_64; rv:137.0) Gecko/20100101 Firefox/137.0"
+
+		yt-dlp --user-agent "$user_agent" -f "bestvideo[height<=1080]+bestaudio[ext=m4a]/bestaudio"  -o ~/Videos/"%(title)s.%(ext)s" --write-subs --sub-lang "en.*" --write-auto-subs --convert-subs srt --remux-video mkv --embed-thumbnail --add-metadata --restrict-filenames "$link"
+
+        title_sanitized=$(yt-dlp -o "%(title)s" --restrict-filenames --get-filename "$link")
+        title=$(yt-dlp -o "%(title)s" --get-title "$link")
+        temp=$(mktemp)
+        count=2
+        ls -1vr ~/Videos/ | grep "$title_sanitized" | grep "\.srt$" > "$temp"
+        
+        ffmpeg_args=(-i ~/Videos/"$title_sanitized.mkv")
+        map_args="-map 0"
+        metadata_args=""
+        index=1
+
+        while IFS= read -r subtitle; do
+            ffmpeg_args+=(-i /home/rafael/Videos/"$subtitle")
+            language=$(echo "$subtitle" | sed -E 's/.*\.([a-zA-Z0-9_-]+)\.srt$/\1/')
+            map_args+=" -map $index"
+            metadata_args+=" -metadata:s:$(( index - 1 )) language=$language"
+            index=$(( index + 1 ))
+        done < "$temp"
+
+        output="/home/rafael/Videos/$title_sanitized.subtitled.mkv"
+        if [[ -f "/home/rafael/Videos/$title_sanitized.mkv" ]]; then
+            ffmpeg "${ffmpeg_args[@]}" $map_args $metadata_args -c copy -c:s srt "$output"
+            rm ~/Videos/"$title_sanitized.mkv"
+            rm ~/Videos/*.srt
+            mv ~/Videos/"$title_sanitized.subtitled.mkv" ~/Videos/"$title.mkv"
+        else
+            echo "File does not exist: ~/Videos/$title.mkv"
+        fi
+		;;
+	-h)
+		echo "yt-vsc: basic yt-dlp automated downloading script. "
+		echo "1. '--audio-only' - Downloads the best codec/format of audio"
+		echo "	Usage: yt-vsc <url> --audio-only"
+		echo "2. '--video only' - Downloads the best encode/format of video"
+		echo "	Usage: yt-vsc <url> --video-only"
+		echo "3. '--video-and-audio' - Downloads the best audio and video and combines them"
+		echo "	Usage: yt-vsc <url> --video-and-audio"
+		;;
+	*)
+		echo "Invalid options, please use -h for available commands."
+		echo "$1"
+		echo "$2"
+		;;
+esac
+}
