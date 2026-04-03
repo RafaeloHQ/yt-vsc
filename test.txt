@@ -1,0 +1,1 @@
+{'format': 'bestaudio/best', 'outtmpl': '%(title)s.%(ext)s', 'paths': '/home/rafael/Music/Bo Burnham', 'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '0'}, {'key': 'EmbedThumbnail'}, {'key': 'EmbedMetadata'}], 'prefer_ffmpeg': True, 'quiet': True, 'noplaylist': True}
